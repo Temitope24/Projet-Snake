@@ -41,6 +41,12 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
     int vélocitéX;
     int vélocitéY;
     Boolean gameOver= false; //pour les conditions du game over
+    int score=0; // score du joueur
+    int highscore=0; //highscore du jouer
+
+    private BufferedImage appleImage;
+    private BufferedImage trophyImage;
+    int imageSize=30;
     
 
     // ---------------------------------------------------------------------------
@@ -77,9 +83,22 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         }
         // ---------------------------------------------------------------------------
 
-        boucledujeu= new Timer(100,this);
+        boucledujeu= new Timer(60,this);
         boucledujeu.start();
+
+        //-Samuel
+    try{
+        appleImage=ImageIO.read(new File("redapple.png"));
+        trophyImage=ImageIO.read(new File("trophy.png"));
+    } catch (Exception e){
+        e.printStackTrace(); // affiche l'erreur
     }
+
+    
+
+    }
+
+
     public void paintComponent(Graphics g){
         super.paintComponent(g);
         draw(g);
@@ -119,6 +138,44 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
             Tile partiduserpent= corpsduserpent.get(i);
             g.fillRect(partiduserpent.x*tailleduncarreau, partiduserpent.y*tailleduncarreau, tailleduncarreau, tailleduncarreau);
         }
+        //Score and High Score - Sqmuel
+        g.setColor(Color.black);
+        g.setFont(new Font("Ink Free",Font.BOLD,40));
+        //String scoreText="Score: "+ score;
+        //String highscoreText= "High Score: "+ highscore;
+        //FontMetrics metrics=g.getFontMetrics(g.getFont());
+        //int x= (boardWidth-metrics.stringWidth(scoreText))/2;
+        //int y=metrics.getHeight();
+
+        //int highscorex=(boardWidth-metrics.stringWidth(highscoreText))/2;
+       //int highscorey=metrics.getHeight();
+        
+        //g.drawString(scoreText,x,y);
+        //g.drawString(highscoreText,highscorex,highscorey);
+
+        String scoreText= String.valueOf(score);
+        String highscoreText=String.valueOf(highscore);
+
+        FontMetrics font=g.getFontMetrics(g.getFont());
+
+        //Coordinates
+        int spacing = 10;
+
+        int x= boardWidth/2-100;
+        int y=font.getHeight();
+
+        int highscorex= x+ 100;
+        int highscorey=y;
+
+        g.drawImage(appleImage, x, y - imageSize, imageSize,imageSize,null);
+        g.drawString(scoreText,x + imageSize+spacing,y);
+        
+        g.drawImage(trophyImage, highscorex, highscorey - imageSize, imageSize,imageSize,null);
+        g.drawString(highscoreText,highscorex + imageSize+spacing,highscorey);
+        
+
+
+
 
         // indication gameover - Temi
         if (gameOver) {
@@ -141,6 +198,10 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
             corpsduserpent.add(new Tile(nourriture.x, nourriture.y));
             placeNourriture();
 
+            score++; //pour on augment le score
+            if (score>highscore){
+                highscore=score;
+            }
             duSon("eating.wav"); // quand la nourriture est mangé
 
         }
@@ -258,13 +319,14 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         }
     }
 
-    // reinitialiser - Temi
+    // reinitialiser - Temi & Samuel
     private void reInitialiser() {
         têteduserpent = new Tile(5,5);
         corpsduserpent.clear(); // corpsduserpent est une ArrayList qui stocke tous les segments du corps
         vélocitéX = 0;
         vélocitéY = 0;
         gameOver = false;
+        score=0; //remettre à zero,  mais pas le high score 
         placeNourriture();
         boucledujeu.start();
         repaint(); // Force le panneau à se redessiner immédiatement en appelant paintComponent()
