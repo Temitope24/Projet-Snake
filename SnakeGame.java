@@ -1,9 +1,17 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Random;
+
+import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.*;
-//import java.util.ArrayList;
 
 
 public class SnakeGame extends JPanel implements ActionListener, KeyListener{
@@ -32,7 +40,12 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
     Timer boucledujeu;
     int vélocitéX;
     int vélocitéY;
-    Boolean gameOver= false;
+    Boolean gameOver= false; //pour les conditions du game over
+    
+
+    // ---------------------------------------------------------------------------
+    private BufferedImage backgroundTile; //Pour stocker l'image - Temi
+    // ---------------------------------------------------------------------------
 
 
     SnakeGame (int boardWidth,int boardHeight){
@@ -54,6 +67,16 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         vélocitéX=0;
         vélocitéY=0;
 
+        // ---------------------------------------------------------------------------
+        // Charger l'image de fond - Temi
+        try {
+            backgroundTile = ImageIO.read(new File("tile.png"));
+        }
+        catch (Exception e){
+            e.printStackTrace(); // affiche l'erreur
+        }
+        // ---------------------------------------------------------------------------
+
         boucledujeu= new Timer(100,this);
         boucledujeu.start();
     }
@@ -62,22 +85,47 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         draw(g);
     }
     public void draw(Graphics g){
-        //Grid 
-        for (int i=0;i< boardWidth/tailleduncarreau;i++){
-            g.drawLine(i*tailleduncarreau,0,i*tailleduncarreau,boardWidth);//ligne verticale du cadrillage espacé de 5
-            g.drawLine(0,i*tailleduncarreau,boardWidth,i*tailleduncarreau);//ligne horizontale du cadrillage espacé de 5 
+
+        // ---------------------------------------------------------------------------
+        // Image de fond - Temi
+        for (int x = 0; x < boardWidth/tailleduncarreau; x++){
+            for (int y = 0; y < boardWidth/tailleduncarreau; y++)
+            g.drawImage(backgroundTile, x*tailleduncarreau, y*tailleduncarreau, tailleduncarreau, tailleduncarreau, null); // null n'a pas d'importance ici
         }
+
         //nourriture: dessinde la nourriture sur le graphique 
-        g.setColor(Color.red);
-        g.fillRect(nourriture.x*tailleduncarreau,nourriture.y*tailleduncarreau,tailleduncarreau,tailleduncarreau);
+        g.setColor(new Color(0xFF6B6B));
+
+
+        int padding = 4; //Temi
+        g.fillOval(nourriture.x*tailleduncarreau + padding,
+                    nourriture.y*tailleduncarreau + padding
+                    ,tailleduncarreau - 2*padding,
+                    tailleduncarreau - 2*padding);
+
+        // colorchoice - Temi
+        Color CouleurTete = new Color(0x5C8F78);
+        Color couleurCorps = new Color(0x6AA084);
+
+        // ---------------------------------------------------------------------------
+
         //Tête du Serpent: dessin du serpent sur le grapique 
-        g.setColor(Color.green);
+        g.setColor(CouleurTete);
         g.fillRect(têteduserpent.x*tailleduncarreau, têteduserpent.y*tailleduncarreau, tailleduncarreau, tailleduncarreau);//la multiplication permet de modifier l'emplacement de notre point vert
          
         //corps du serpent
+        g.setColor(couleurCorps);
         for (int i=0; i<corpsduserpent.size(); i++){
             Tile partiduserpent= corpsduserpent.get(i);
             g.fillRect(partiduserpent.x*tailleduncarreau, partiduserpent.y*tailleduncarreau, tailleduncarreau, tailleduncarreau);
+        }
+
+        // indication gameover - Temi
+        if (gameOver) {
+            g.setColor(new Color(0x2E8B7B));
+            g.setFont(new Font("Arial", Font.BOLD, 30));
+            g.drawString("Game Over!", boardWidth / 2 - 90, boardHeight / 2 - 20);
+            g.drawString("Entrée ou Espace pour recommencer", boardWidth / 2 - 265, boardHeight / 2 + 20);
         }
     }
     public void placeNourriture(){
@@ -91,7 +139,10 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         //pour manger de le point rouge
         if(collision(têteduserpent, nourriture)){
             corpsduserpent.add(new Tile(nourriture.x, nourriture.y));
-            placeNourriture();  
+            placeNourriture();
+
+            duSon("eating.wav"); // quand la nourriture est mangé
+
         }
 
         //corps du serpent 
@@ -111,7 +162,8 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
         //Snake head 
         têteduserpent.x +=vélocitéX;
         têteduserpent.y +=vélocitéY;
-          //game over condition
+
+        //game over condition
         for(int i=0;i<corpsduserpent.size();i++){
             Tile partiduserpent = corpsduserpent.get(i);
             if (collision(têteduserpent,partiduserpent)){
@@ -133,34 +185,92 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
 
     }
 
+    //Conditions du game over
+
+
     @Override
     public void actionPerformed(ActionEvent e) {
         sedéplacer();
         repaint();//va être appelé toutes les millisecondes par le programme va faire changer de couleur les différentes cases:vert->noir,noir->vert,vert->rouge,noir->rouge
         if (gameOver){
+            duSon("game-over.wav");
+
             boucledujeu.stop();
+            
         }
          }
    //à titre d'informatique sur le graphique l'extrimité en haut à gauche à pour coordonnées (0px,0px), et les coordonnées pour le cointoutes en bas à droite(600px,600px)
-  @Override
+
+    @Override
     public void keyPressed(KeyEvent e) {
+
+        // ---------------------------------------------------------------------------
+        // Relancez le jeu si le jeu est terminée - Temi
+        if (gameOver && (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE)) {
+            reInitialiser();
+            return; // pour ne pas executer le reste du programme
+        }
+        // ---------------------------------------------------------------------------
+
+
         if (e.getKeyCode()==KeyEvent.VK_UP && vélocitéY!=1){//indique qu'on a appuyé sur la flêche du haut pour se déplacer, vas déplacer le serpentvert le haut, la touche fonctionne ssi le serpent ne va pas vers le bas 
         vélocitéX= 0;
         vélocitéY=-1;
+        duSon("button.wav"); // pour les boutons
         }
         else if (e.getKeyCode()==KeyEvent.VK_DOWN && vélocitéY!=-1){//indique qu'on a appuyé sur la flêche du bas pour se déplacer vas déplacer le serpent le bas, la touche fonctionne ssi le serpent ne va pas vers le haut 
         vélocitéX= 0;
         vélocitéY=1;
+        duSon("button.wav");
         }
         else if (e.getKeyCode()==KeyEvent.VK_LEFT && vélocitéX!=1){//indique qu'on a appuyé sur la flêche de gauche pour se déplacer vas déplacer le serpent le gauche, la touche fonctionne ssi le serpent ne va pas vers la droite
         vélocitéX= -1;
         vélocitéY=0;
+        duSon("button.wav");
         }
         else if (e.getKeyCode()==KeyEvent.VK_RIGHT && vélocitéX!=-1){//indique qu'on a appuyé sur la flêche de droite pour se déplacer vas déplacer le serpent la droite, la touche fonctionne ssi le serpent ne va pas vers la gauche 
         vélocitéX= 1;
         vélocitéY=0;
+        duSon("button.wav");
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // Son Temi
+    private void duSon(String chemin) {
+        File file = new File(chemin);
+
+        try(AudioInputStream audio = AudioSystem.getAudioInputStream(file)) {
+
+            Clip clip = AudioSystem.getClip();
+            clip.open(audio);
+
+            clip.start();
+        }
+        catch(LineUnavailableException l) {
+            System.out.println("Impossible d'accéder à la ressource audio");
+        }
+        catch(UnsupportedAudioFileException u) {
+            System.out.println("Fichier audio non pris en charge");
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // reinitialiser - Temi
+    private void reInitialiser() {
+        têteduserpent = new Tile(5,5);
+        corpsduserpent.clear(); // corpsduserpent est une ArrayList qui stocke tous les segments du corps
+        vélocitéX = 0;
+        vélocitéY = 0;
+        gameOver = false;
+        placeNourriture();
+        boucledujeu.start();
+        repaint(); // Force le panneau à se redessiner immédiatement en appelant paintComponent()
+    }
+
+    // ---------------------------------------------------------------------------
 
     //inutile
    @Override
