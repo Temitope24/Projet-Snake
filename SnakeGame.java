@@ -40,7 +40,7 @@ public class SnakeGame extends JPanel implements ActionListener, KeyListener{
     Timer boucledujeu;
     int vélocitéX;
     int vélocitéY;
-    Boolean gameOver= false; //pour les conditions du game over
+    Boolean gameOver= true; //pour les conditions du game over
     int score=0; // score du joueur
     int highscore=0; //highscore du jouer
 
